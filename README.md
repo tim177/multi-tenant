@@ -18,23 +18,46 @@ super-admin app   admin app   user app        (3 separate Next.js frontends)
 
 Auth is **custom** (JWT + bcrypt). Supabase is used **only as the Postgres database** — its
 built-in Auth is intentionally not used, to comply with the "no third-party auth providers" rule.
+The organization a user acts on is derived from their JWT (never from the request), which is what
+enforces tenant isolation.
 
 ## Repo layout
 
 ```
-backend/            Express + Prisma API
-apps/super-admin/   Next.js app (Super Admin)   [added in a later step]
-apps/admin/         Next.js app (Org Admin)     [added in a later step]
-apps/user/          Next.js app (End User)      [added in a later step]
+backend/            Express + Prisma API                    (port 4000)
+apps/super-admin/   Next.js app — create/list orgs          (port 3001)
+apps/admin/         Next.js app — manage feature flags       (port 3002)
+apps/user/          Next.js app — check a feature            (port 3003)
 ```
 
-## Build steps
+Frontends use Next.js (App Router) + Tailwind + shadcn/ui.
 
-- **Step 0 — Foundations:** repo, backend scaffold, Prisma schema, migrate + seed.  ← current
-- Step 1 — Backend auth (signup/login, JWT, role middleware).
-- Step 2 — Backend domain (organizations, flag CRUD, feature check).
-- Step 3 — Super Admin frontend.
-- Step 4 — Admin frontend.
-- Step 5 — User frontend.
+## Running everything
 
-See `backend/README.md` for backend setup and the Supabase instructions.
+1. **Backend** (see `backend/README.md` for Supabase setup):
+   ```bash
+   cd backend && npm install
+   cp .env.example .env        # fill in Supabase + secrets
+   npm run prisma:migrate && npm run db:seed
+   npm run dev                 # http://localhost:4000
+   ```
+2. **Each frontend** (separate terminals):
+   ```bash
+   cd apps/super-admin && npm install && npm run dev   # :3001
+   cd apps/admin       && npm install && npm run dev   # :3002
+   cd apps/user        && npm install && npm run dev   # :3003
+   ```
+
+## Demo credentials
+
+- **Super Admin:** `superadmin@host.com` / `SuperAdmin@123` (from backend `.env`)
+- **Org Admin (Acme Corp):** `admin@acme.com` / `secret123`
+- **End User (Acme Corp):** `user@acme.com` / `secret123` — try checking the key `dark_mode`
+
+## Roles
+
+| Role | App | Can |
+|---|---|---|
+| Super Admin | super-admin (:3001) | log in (static creds), create & list organizations |
+| Org Admin | admin (:3002) | sign up into an org, log in, create / toggle / delete flags (own org only) |
+| End User | user (:3003) | sign up into an org, log in, check whether a feature key is enabled |
