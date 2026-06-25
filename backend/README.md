@@ -29,6 +29,29 @@ Health check: `GET http://localhost:4000/api/health` → `{ "status": "ok", "db"
 
 That's all that's needed from the dashboard — we create the tables ourselves via Prisma migrations.
 
+## API reference
+
+Auth is via `Authorization: Bearer <jwt>`. The org a caller acts on is derived from their token —
+never from a request parameter — which is what enforces tenant isolation.
+
+| Method | Route | Role | Purpose |
+|---|---|---|---|
+| GET | `/api/health` | — | liveness + DB check |
+| POST | `/api/auth/super-admin/login` | — | static env credentials → super_admin JWT |
+| POST | `/api/auth/signup` | — | register org_admin / end_user into an existing org |
+| POST | `/api/auth/login` | — | email + password → JWT (org from user record) |
+| GET | `/api/organizations/public` | — | `[{id,name}]` for signup dropdowns |
+| POST | `/api/organizations` | super_admin | create an organization |
+| GET | `/api/organizations` | super_admin | list all orgs (+ user/flag counts) |
+| GET | `/api/flags` | org_admin | list this org's flags |
+| POST | `/api/flags` | org_admin | create a flag (`{key, enabled?}`) |
+| PATCH | `/api/flags/:id` | org_admin | enable/disable or rename (org-scoped) |
+| DELETE | `/api/flags/:id` | org_admin | delete (org-scoped) |
+| GET | `/api/flags/check?key=` | end_user | resolve a flag for the caller's org |
+
+Status codes: `400` validation, `401` missing/invalid token, `403` wrong role, `404` not found /
+not in your org, `409` duplicate (org name or feature key).
+
 ## Env vars
 
 See `.env.example`. Never commit `.env` (it's git-ignored).

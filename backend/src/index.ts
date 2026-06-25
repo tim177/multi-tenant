@@ -5,6 +5,7 @@ import { prisma } from "./lib/prisma.js";
 import { errorHandler } from "./lib/http.js";
 import authRoutes from "./routes/auth.js";
 import organizationRoutes from "./routes/organizations.js";
+import flagRoutes from "./routes/flags.js";
 
 const app = express();
 app.use(cors());
@@ -22,8 +23,7 @@ app.get("/api/health", async (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/organizations", organizationRoutes);
-
-// Flag routes are mounted in Step 2.
+app.use("/api/flags", flagRoutes);
 
 app.use(errorHandler);
 
