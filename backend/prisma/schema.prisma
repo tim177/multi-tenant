@@ -1,0 +1,62 @@
+// Data model for the multi-tenant feature-flag system.
+// Supabase is used purely as the Postgres database (no Supabase Auth).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection (pgbouncer, port 6543) for runtime
+  directUrl = env("DIRECT_URL")   // direct connection (port 5432) for migrations
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  users User[]
+  flags FeatureFlag[]
+
+  @@map("organizations")
+}
+
+model Role {
+  id   Int    @id @default(autoincrement())
+  name String @unique // "org_admin" | "end_user"
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique // global-unique => login by email alone
+  passwordHash String   @map("password_hash")
+  orgId        String   @map("org_id")
+  roleId       Int      @map("role_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  @@index([orgId])
+  @@map("users")
+}
+
+model FeatureFlag {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  key       String // the feature_key
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, key]) // a feature key is unique per organization
+  @@index([orgId])
+  @@map("feature_flags")
+}
